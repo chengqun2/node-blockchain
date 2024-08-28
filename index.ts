@@ -1,127 +1,35 @@
-import * as crypto from 'crypto';
+import Web3 from 'web3';
 
-// Transfer of funds between two wallets
-class Transaction {
-  constructor(
-    public amount: number, 
-    public payer: string, // public key
-    public payee: string // public key
-  ) {}
-
-  toString() {
-    return JSON.stringify(this);
-  }
-}
-
-// Individual block on the chain
-class Block {
-
-  public nonce = Math.round(Math.random() * 999999999);
-
-  constructor(
-    public prevHash: string, 
-    public transaction: Transaction, 
-    public ts = Date.now()
-  ) {}
-
-  get hash() {
-    const str = JSON.stringify(this);
-    const hash = crypto.createHash('SHA256');
-    hash.update(str).end();
-    return hash.digest('hex');
-  }
-}
+const NODE_URL = `https://mainnet.infura.io/v3/1f6794bd3cf84c06bfb326cf897d1f3d`;
+const web3 = new Web3(new Web3.providers.HttpProvider(NODE_URL));
+const address = '0x7565D8BF5d36a05938725AdaB5799Cd8De34553a'
+web3.eth.getBalance(address).then(res =>{
+    console.log(`res=======> ${res}`)
+}).catch(e => {
+    console.log("e============>,", e)
+})
 
 
-// The blockchain
-class Chain {
-  // Singleton instance
-  public static instance = new Chain();
+const account = web3.eth.accounts.create();
+console.log(`account.address===========> ${account.address}`);
 
-  chain: Block[];
 
-  constructor() {
-    this.chain = [
-      new Block('', new Transaction(100, 'ernest', 'james'))
-    ];
-  }
 
-  // Most recent block
-  get lastBlock() {
-    return this.chain[this.chain.length - 1];
-  }
+const main = async () => {
+    // Get the latest block number
+    const latestBlockNumber = await web3.eth.getBlockNumber();
+    console.log(`Latest block number: ${latestBlockNumber}`);
 
-  // Proof of work system
-  mine(nonce: number) {
-    let solution = 1;
-    console.log('⛏️  mining...')
+    // Get the latest block details
+    const latestBlock = await web3.eth.getBlock(latestBlockNumber);
+    console.log(`Latest block details: ${JSON.stringify(latestBlock, null, 2)}`);
 
-    while(true) {
+    // Get the balance of an address (replace with any Ethereum address)
+    const address = '0x742d35Cc6634C0532925a3b844Bc454e4438f44e';
+    const balance = await web3.eth.getBalance(address);
+    console.log(`Balance of address ${address}: ${web3.utils.fromWei(balance, 'ether')} ETH`);
+};
 
-      const hash = crypto.createHash('MD5');
-      hash.update((nonce + solution).toString()).end();
-
-      const attempt = hash.digest('hex');
-       
-      if(attempt.substring(0,4) === '1234'){
-        console.log(`attempt: ${attempt}, Solved: ${solution}`);
-        return solution;
-      }
-
-      solution += 1;
-    }
-  }
-
-  // Add a new block to the chain if valid signature & proof of work is complete
-  addBlock(transaction: Transaction, senderPublicKey: string, signature: Buffer) {
-    const verify = crypto.createVerify('SHA256');
-    verify.update(transaction.toString());
-
-    const isValid = verify.verify(senderPublicKey, signature);
-
-    if (isValid) {
-      const newBlock = new Block(this.lastBlock.hash, transaction);
-      this.mine(newBlock.nonce);
-      this.chain.push(newBlock);
-    }
-  }
-
-}
-
-// Wallet gives a user a public/private keypair
-class Wallet {
-  public publicKey: string;
-  public privateKey: string;
-
-  constructor() {
-    const keypair = crypto.generateKeyPairSync('rsa', {
-      modulusLength: 2048,
-      publicKeyEncoding: { type: 'spki', format: 'pem' },
-      privateKeyEncoding: { type: 'pkcs8', format: 'pem' },
-    });
-
-    this.privateKey = keypair.privateKey;
-    this.publicKey = keypair.publicKey;
-  }
-
-  sendMoney(amount: number, payeePublicKey: string) {
-    const transaction = new Transaction(amount, this.publicKey, payeePublicKey);
-
-    const sign = crypto.createSign('SHA256');
-    sign.update(transaction.toString()).end();
-
-    const signature = sign.sign(this.privateKey); 
-    Chain.instance.addBlock(transaction, this.publicKey, signature);
-  }
-}
-
-// Example usage
-const james = new Wallet();
-const bob = new Wallet();
-// const alice = new Wallet();
-
-james.sendMoney(100, bob.publicKey);
-// bob.sendMoney(20, alice.publicKey);
-// alice.sendMoney(30, james.publicKey);
-
-console.log(Chain.instance)
+main().catch(err => {
+    console.error(`=========Error: ${err.message}`);
+});

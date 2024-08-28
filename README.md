@@ -1,5 +1,5 @@
 ### install dependencies
-`npm install --save-dev typescript ts-node @types/node`
+`npm install`
 
 ### start the project
 `npm start`
